@@ -40,6 +40,8 @@ def main():
     """
     Encompasses the main logic of the script
     """
+    main_logger.debug("#################################")
+    main_logger.debug("Starting new run")
     curr_data = pd.read_sql(sql="SELECT ad_url FROM seen_ads",
                             con=db.conn)
     if len(curr_data) == 0:
