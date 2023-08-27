@@ -1,0 +1,11 @@
+df_schema:
+  ad_url: "object"
+  search_url: "object"
+  run_uuid: "object"
+  seen_on: "int64"
+
+create_sql_path: 
+
+db:
+  create_sql: "src/mvp_db.sql"
+  path: "storage/mvp_db.sqlite"
