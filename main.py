@@ -87,6 +87,7 @@ def main():
 
     if len(new_data) > 0:
         new_data = new_data.astype(MAIN_CFG["df_schema"])
+        new_data = new_data.drop_duplicates(subset=["ad_url"], keep="first")
         main_logger.debug("Net new data: %s\n", new_data)
         main_logger.debug("Appending results to the db")
         new_data.to_sql(name="seen_ads", con=db.conn,
