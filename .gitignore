@@ -18,7 +18,7 @@ __pycache__/
 .vscode/
 
 # Ignoring logs coz they are heavy
-logs/*
+logs/
 *.log
 
 # Ignoring orm_tutor db

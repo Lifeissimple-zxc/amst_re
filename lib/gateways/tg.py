@@ -22,7 +22,6 @@ class TelegramGateway:
             base_url=base_url,
             send_msg_endpoint=send_msg_endpoint
         )
-        print(self.send_msg_url)
         self.base_message_data = {"chat_id": chat_id}
         self.sesh = requests.session()
         atexit.register(self.sesh.close)
@@ -44,8 +43,5 @@ class TelegramGateway:
         msg_data = {
             **self.base_message_data, **{"text": msg_str}
         }
-        print(msg_data)
-        return self.sesh.post(url=self.send_msg_url, data={
-            **self.base_message_data, **{"text": msg_str}
-        })
+        return self.sesh.post(url=self.send_msg_url, data=msg_data)
         

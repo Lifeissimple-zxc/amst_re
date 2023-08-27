@@ -1,0 +1,22 @@
+version: 1
+
+formatters:
+  main:
+    format: "[%(asctime)s - %(levelname)s - %(funcName)s()]\t %(message)s"
+
+handlers:
+  StreamHandler:
+    class: "logging.StreamHandler"
+    formatter: "main"
+  RotatingFile:
+    (): "logging.handlers.TimedRotatingFileHandler"
+    filename: "logs/amst_re.log"
+    when: "midnight"
+    utc: True
+
+loggers:
+  main_logger:
+    level: "DEBUG"
+    handlers:
+      - "StreamHandler"
+      - "RotatingFile"
