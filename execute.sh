@@ -3,6 +3,6 @@
 cd /home/mararkarp/projects/amst_re
 source env/bin/activate
 
-python main.py
+python main.py prod
 
 deactivate

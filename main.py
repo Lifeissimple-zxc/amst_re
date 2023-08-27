@@ -3,6 +3,7 @@ import uuid
 import time
 import logging
 import random
+import sys
 from logging import config
 
 import pandas as pd
@@ -67,13 +68,16 @@ def main():
             main_logger.debug("No new listings from %s", search)
             continue
         
-        main_logger.debug("Sending new listings to telegram")
-        for listing in net_new_listings:
-            msg = f"New listing for {search}:\n{listing}"
-            time.sleep(random.randint(0, 3))
-            r = telegram.send_message(msg)
-            if r.status_code != 200:
-                main_logger.warning("Message failed for %s", listing)
+        if sys.argv[1] != "shadow":
+            main_logger.debug("Sending new listings to telegram")
+            for listing in net_new_listings:
+                msg = f"New listing for {search}:\n{listing}"
+                time.sleep(random.randint(0, 3))
+                r = telegram.send_message(msg)
+                if r.status_code != 200:
+                    main_logger.warning("Message failed for %s", listing)
+        else:
+            main_logger.debug("SHADOW MODE, now listings to tg")
         
         # Prepare an interim df
         temp_df = pd.DataFrame(columns=MAIN_CFG["df_schema"].keys())
