@@ -2,8 +2,6 @@
 Implements gateways to fetch data from NL real estate data sources
 """
 import atexit
-import time
-import random
 import logging
 import json
 import re
