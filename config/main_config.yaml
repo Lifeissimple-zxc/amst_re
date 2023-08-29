@@ -9,3 +9,20 @@ create_sql_path:
 db:
   create_sql: "src/mvp_db.sql"
   path: "storage/mvp_db.sqlite"
+
+pararius:
+  rental_listing_pattern: "for-rent"
+  base_url: "https://pararius.com"
+  rps: 0.5
+
+funda:
+  rps: 0.5
+  results_per_page: 15
+  next_page_pattern: "&search_result=([0-9]+)"
+
+
+telegram:
+  rps: 1
+
+http_headers:
+  user-agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36"

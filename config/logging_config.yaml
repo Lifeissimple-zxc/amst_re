@@ -13,6 +13,7 @@ handlers:
     filename: "logs/amst_re.log"
     when: "midnight"
     utc: True
+    formatter: "main"
 
 loggers:
   main_logger:

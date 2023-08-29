@@ -2,7 +2,6 @@ import yaml
 import uuid
 import time
 import logging
-import random
 import sys
 from logging import config
 
@@ -26,13 +25,15 @@ db = simple_db_wrapper.SimpleDb(db_path=MAIN_CFG["db"]["path"])
 db.run_create_sql(CREATE_SQL)
 main_logger.debug("Prepared database")
 
-pararius = amst_re.ParariusGateway(rental_listing_pattern="for-rent",
-                                   base_url="https://pararius.com")
+pararius = amst_re.ParariusGateway(**MAIN_CFG["pararius"])
+funda = amst_re.FundaGateway(headers=MAIN_CFG["http_headers"], **MAIN_CFG["funda"])
+
 telegram = tg.TelegramGateway(
     bot_secret=SECRETS["telegram"]["bot_secret"],
     base_url=SECRETS["telegram"]["base_url"],
     chat_id=SECRETS["telegram"]["chat_id"],
-    send_msg_endpoint=SECRETS["telegram"]["send_msg_endpoint"]
+    send_msg_endpoint=SECRETS["telegram"]["send_msg_endpoint"],
+    rps=MAIN_CFG["telegram"]["rps"]
 )
 
 main_logger.debug("Instantiated gateways")
@@ -57,10 +58,17 @@ def main():
     main_logger.debug("Starting searches")
 
     # Move this to be picked up from a gsheet
-    for search in SECRETS["pararius"]["searches"]:
-        pararius.perform_search(search)
+    for search in SECRETS["searches"]:
+        worker_class = choose_gateway(
+            url=search, pararius=pararius, funda=funda
+        )
+        if isinstance(worker_class, ValueError):
+            main_logger.warning("Got error %s for %s", worker_class, search)
+            continue
+
+        worker_class.perform_search(search)
         # Here we filter out net new ads using sets
-        net_new_listings = pararius.session_listings.difference(
+        net_new_listings = worker_class.session_listings.difference(
             current_urls
         )
         main_logger.debug("Done with %s", search)
@@ -71,13 +79,13 @@ def main():
         if sys.argv[1] != "shadow":
             main_logger.debug("Sending new listings to telegram")
             for listing in net_new_listings:
-                msg = f"New listing for {search}:\n{listing}"
-                time.sleep(random.randint(0, 3))
-                r = telegram.send_message(msg)
+                r = telegram.send_message(f"New listing: \n{listing}")
                 if r.status_code != 200:
                     main_logger.warning("Message failed for %s", listing)
         else:
-            main_logger.debug("SHADOW MODE, now listings to tg")
+            main_logger.debug(
+                "SHADOW MODE, not sending tg messages"
+            )
         
         # Prepare an interim df
         temp_df = pd.DataFrame(columns=MAIN_CFG["df_schema"].keys())
@@ -97,6 +105,20 @@ def main():
         new_data.to_sql(name="seen_ads", con=db.conn,
                         if_exists="append", index=False)
     main_logger.debug("Done, tutto bene")
+
+
+def choose_gateway(url: str, pararius: amst_re.ParariusGateway,
+                   funda: amst_re.FundaGateway):
+    worker_class = None
+    
+    if "pararius" in url:
+        worker_class = pararius
+    elif "funda" in url:
+        worker_class = funda
+    else:
+        worker_class = ValueError(f"Can't decide on worker for url: {url}")
+    
+    return worker_class
    
 
 try:

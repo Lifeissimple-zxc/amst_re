@@ -6,6 +6,8 @@ import logging
 
 import requests
 
+from lib.gateways.base import rps_limiter
+
 main_logger = logging.getLogger("main_logger")
 
 class TelegramGateway:
@@ -13,7 +15,8 @@ class TelegramGateway:
     Sends messages to telegram using a bot
     """
     def __init__(self, bot_secret: str, base_url: str,
-                 chat_id: int, send_msg_endpoint: str):
+                 chat_id: int, send_msg_endpoint: str,
+                 rps: float, concurrent_requests: int = None):
         """
         Constructor of the class
         """
@@ -21,6 +24,9 @@ class TelegramGateway:
             bot_secret=bot_secret,
             base_url=base_url,
             send_msg_endpoint=send_msg_endpoint
+        )
+        self.limiter = rps_limiter.ThreadingLimiter(
+            rps=rps, concurrent_requests=concurrent_requests
         )
         self.base_message_data = {"chat_id": chat_id}
         self.sesh = requests.session()
@@ -43,5 +49,7 @@ class TelegramGateway:
         msg_data = {
             **self.base_message_data, **{"text": msg_str}
         }
-        return self.sesh.post(url=self.send_msg_url, data=msg_data)
+        with self.limiter:
+            r = self.sesh.post(url=self.send_msg_url, data=msg_data)
+        return r
         
