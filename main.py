@@ -71,7 +71,9 @@ def main():
         net_new_listings = worker_class.session_listings.difference(
             current_urls
         )
+        
         main_logger.debug("Done with %s", search)
+        main_logger.debug("Got %s net new listings", len(net_new_listings))
         if len(net_new_listings) == 0:
             main_logger.debug("No new listings from %s", search)
             continue
@@ -79,6 +81,10 @@ def main():
         if sys.argv[1] != "shadow":
             main_logger.debug("Sending new listings to telegram")
             for listing in net_new_listings:
+                main_logger.debug(
+                    "Sending an alert on %s, search class in %s",
+                    listing, worker_class
+                )
                 r = telegram.send_message(f"New listing: \n{listing}")
                 if r.status_code != 200:
                     main_logger.warning("Message failed for %s", listing)
