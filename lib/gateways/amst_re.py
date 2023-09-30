@@ -5,6 +5,7 @@ import atexit
 import logging
 import json
 import re
+from typing import Optional
 
 import bs4
 import requests
@@ -115,12 +116,17 @@ class ParariusGateway(BaseGateway):
             return
         return next_page_el.find("a").get("href")
     
-    def perform_search(self, search_url: str):
+    def perform_search(self, search_url: str,
+                       debug_mode: Optional[bool] = None):
         """
         Performs a search on one search url
         """
+        if debug_mode is None:
+            debug_mode = False
         main_logger.debug("Searching for %s", search_url)
         page_soup, e = self.fetch_page(url=search_url, features="html.parser")
+        if debug_mode:
+            main_logger.debug("Page soup for url %s: %s", search_url, page_soup) 
         if e is not None:
             main_logger.error("Failed to fetch %s", search_url)
             raise e
