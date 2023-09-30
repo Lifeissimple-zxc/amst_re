@@ -122,7 +122,7 @@ class ParariusGateway(BaseGateway):
         Performs a search on one search url
         """
         if debug_mode is None:
-            debug_mode = False
+            debug_mode = True
         main_logger.debug("Searching for %s", search_url)
         page_soup, e = self.fetch_page(url=search_url, features="html.parser")
         if debug_mode:
