@@ -26,3 +26,20 @@ telegram:
 
 http_headers:
   user-agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36"
+
+proxies:
+  freeproxy:
+    url: "http://free-proxy.cz/en/proxylist/country/US/https/uptime/level3"
+    headers:
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
+      Accept-Encoding: "gzip, deflate"
+      Accept-Language: "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7"
+      Cache-Control: "no-cache"
+      Connection: "keep-alive"
+      Host: "free-proxy.cz"
+      Pragma: "no-cache"
+      Upgrade-Insecure-Requests: "1"
+      User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36"
+
+  sslproxies:
+    url: "https://sslproxies.org/"

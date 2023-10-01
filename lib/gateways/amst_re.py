@@ -19,9 +19,16 @@ class BaseGateway:
     Implements methods common across data sources
     """
     def __init__(self, rps: float, headers: dict = None,
-                 concurrent_requests: int = None):
+                 concurrent_requests: int = None,
+                 proxy_list: Optional[list] = None):
         """Constructor of the class"""
+        self.get_timeout = 10
+        # Verify is false as long as proxies are not in use
+        self.verify = False
         self.sesh = requests.session()
+        if proxy_list is not None:
+            self.proxy_list = iter(proxy_list)
+            self._set_sesh_proxy()
         # Set headers if we have any
         if headers is not None:
             self.sesh.headers.update(headers)
@@ -30,10 +37,27 @@ class BaseGateway:
             rps=rps, concurrent_requests=concurrent_requests
         )
 
-    def _get_html_page(self, url: str) -> tuple:
-        """Performs a GET request to the url"""
-        with self.limiter:
-            r = self.sesh.get(url)
+    def _set_sesh_proxy(self):
+        """
+        Update's proxies used by session
+        """
+        try:
+            curr_prox = next(self.proxy_list)
+            self.sesh.proxies.update(
+                {
+                    "http": curr_prox,
+                    "https": curr_prox 
+                }
+            )
+        except StopIteration as e:
+            main_logger.error("Ran out of proxies, stopping execution")
+            raise e
+
+    @staticmethod
+    def _process_response(url: str, r: requests.Response):
+        """
+        Converts respone to a tuple of data, err form
+        """
         main_logger.debug("Got status %s for %s", r.status_code, url)
         if r.status_code != 200:
             main_logger.warning(
@@ -43,14 +67,60 @@ class BaseGateway:
             msg = f"Bad request for {url}"
             e = ValueError(msg)
             main_logger.error(e)
-            return None, e
+            return r.text, e
         elif r.status_code >= 500:
             msg = f"Server error for {url}"
             e = ValueError(msg)
             main_logger.error(e)
-            return None, e
+            return r.text, e
         else:
             return r.text, None
+
+    def _get_html_page(self, url: str) -> tuple:
+        """Performs a GET request to the url accounting for proxies"""
+        data, e = None, None
+        try:
+            with self.limiter:
+                r = self.sesh.get(url, verify=self.verify, timeout=self.get_timeout)
+            main_logger.debug("Reuqest timedout: %s", e)
+            data, e = self._process_response(url=url, r=r)
+            if e is None:
+                return data, e
+            if self.proxy_list is None:
+                main_logger.warning(
+                    "No proxies suppliled, can't perfrom recursive calls"
+                )
+                return data, e
+            self._set_sesh_proxy()
+            return self._get_html_page(url=url)
+        except requests.exceptions.Timeout as e:
+            self._set_sesh_proxy()
+            return self._get_html_page(url=url)
+
+
+
+    
+    # def _get_html_page(self, url: str) -> tuple:
+    #     """Performs a GET request to the url"""
+    #     with self.limiter:
+    #         r = self.sesh.get(url, verify=self.verify)
+    #     main_logger.debug("Got status %s for %s", r.status_code, url)
+    #     if r.status_code != 200:
+    #         main_logger.warning(
+    #             "Url %s got bad status %s", url, r.status_code
+    #         )
+    #     if 400 <= r.status_code < 500:
+    #         msg = f"Bad request for {url}"
+    #         e = ValueError(msg)
+    #         main_logger.error(e)
+    #         return r.text, e
+    #     elif r.status_code >= 500:
+    #         msg = f"Server error for {url}"
+    #         e = ValueError(msg)
+    #         main_logger.error(e)
+    #         return r.text, e
+    #     else:
+    #         return r.text, None
         
     def fetch_page(self, url: str, features: str) -> tuple:
         """
@@ -78,12 +148,14 @@ class ParariusGateway(BaseGateway):
     """
     def __init__(self, rental_listing_pattern: str, base_url: str,
                  rps: float, headers: dict = None,
-                 concurrent_requests: int = None):
+                 concurrent_requests: int = None,
+                 proxy_list: Optional[list] = None):
         """
         Constuctor where we inhering from BaseGateway parent
         """
         super().__init__(rps=rps, headers=headers,
-                         concurrent_requests=concurrent_requests)
+                         concurrent_requests=concurrent_requests,
+                         proxy_list=proxy_list)
         self.rental_listing_pattern = rental_listing_pattern
         self.base_url = base_url
         self.session_listings = set()
@@ -123,7 +195,8 @@ class ParariusGateway(BaseGateway):
         """
         if debug_mode is None:
             debug_mode = True
-        main_logger.debug("Searching for %s", search_url)
+        main_logger.debug("Searching for %s with debug mode %s",
+                          search_url, debug_mode)
         page_soup, e = self.fetch_page(url=search_url, features="html.parser")
         if debug_mode:
             main_logger.debug("Page soup for url %s: %s", search_url, page_soup) 
@@ -139,7 +212,8 @@ class ParariusGateway(BaseGateway):
         if next_p is None:
             return
 
-        self.perform_search(f"{self.base_url}{next_p}")
+        self.perform_search(search_url=f"{self.base_url}{next_p}",
+                            debug_mode=debug_mode)
 
 
 class FundaGateway(BaseGateway):
@@ -201,7 +275,7 @@ class FundaGateway(BaseGateway):
         Performs a search on one search url (recursively reads different result pages)
         """
         if debug_mode is None:
-            debug_mode = True
+            debug_mode = False
         main_logger.debug("Searching for %s", search_url)
         page_soup, e = self.fetch_page(url=search_url, features="html.parser")
         if debug_mode:
@@ -219,7 +293,7 @@ class FundaGateway(BaseGateway):
         # First time we call a url, it does not have search_result
         next_url = self.get_next_page_link(search_url=search_url)
         
-        self.perform_search(next_url)
+        self.perform_search(search_url=next_url, debug_mode=debug_mode)
 
 
 

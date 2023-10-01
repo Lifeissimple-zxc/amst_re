@@ -10,6 +10,8 @@ import pandas as pd
 from lib.deps import MAIN_CFG, SECRETS, CREATE_SQL
 from lib.gateways import tg, amst_re
 from lib import simple_db_wrapper
+from lib.gateways.base import proxy_fetcher
+
 
 # Logging boilerplate
 with open("config/logging_config.yaml") as _f:
@@ -18,14 +20,26 @@ config.dictConfig(LOG_CFG)
 main_logger = logging.getLogger("main_logger")
 
 RUN_UUID = str(uuid.uuid4())
+DEBUG = bool(int(sys.argv[2]))
+USE_PROX = bool(int(sys.argv[3]))
 
 main_logger.debug("Read all the constants")
+
+ssl_fetcher = proxy_fetcher.SSLProxiesFetcher(
+    url=MAIN_CFG["proxies"]["sslproxies"]["url"]
+)
+proxies = ssl_fetcher.get_ssl_proxies()
+main_logger.debug("Fetched proxies")
 
 db = simple_db_wrapper.SimpleDb(db_path=MAIN_CFG["db"]["path"])
 db.run_create_sql(CREATE_SQL)
 main_logger.debug("Prepared database")
 
-pararius = amst_re.ParariusGateway(**MAIN_CFG["pararius"])
+if USE_PROX:
+    pararius = amst_re.ParariusGateway(proxy_list=proxies,
+                                       **MAIN_CFG["pararius"])
+else:
+    pararius = amst_re.ParariusGateway(**MAIN_CFG["pararius"])
 funda = amst_re.FundaGateway(headers=MAIN_CFG["http_headers"], **MAIN_CFG["funda"])
 
 telegram = tg.TelegramGateway(
@@ -66,7 +80,7 @@ def main():
             main_logger.warning("Got error %s for %s", worker_class, search)
             continue
 
-        worker_class.perform_search(search)
+        worker_class.perform_search(search_url=search, debug_mode=DEBUG)
         # Here we filter out net new ads using sets
         net_new_listings = worker_class.session_listings.difference(
             current_urls
