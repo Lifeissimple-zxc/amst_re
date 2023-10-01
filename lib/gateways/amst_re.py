@@ -9,10 +9,18 @@ from typing import Optional
 
 import bs4
 import requests
+import retry
 
 from lib.gateways.base import rps_limiter
 
 main_logger = logging.getLogger("main_logger")
+
+class ZeroListingsFoundException(ValueError):
+    """
+    Custom exception for triggering a retry decorator
+    """
+    def __init__(self, msg: str):
+        super().__init__(msg)
 
 class BaseGateway:
     """
@@ -43,6 +51,7 @@ class BaseGateway:
         """
         try:
             curr_prox = next(self.proxy_list)
+            main_logger.debug("Updating sesh proxy to %s", curr_prox)
             self.sesh.proxies.update(
                 {
                     "http": curr_prox,
@@ -82,7 +91,6 @@ class BaseGateway:
         try:
             with self.limiter:
                 r = self.sesh.get(url, verify=self.verify, timeout=self.get_timeout)
-            main_logger.debug("Reuqest timedout: %s", e)
             data, e = self._process_response(url=url, r=r)
             if e is None:
                 return data, e
@@ -93,34 +101,11 @@ class BaseGateway:
                 return data, e
             self._set_sesh_proxy()
             return self._get_html_page(url=url)
-        except requests.exceptions.Timeout as e:
+        except (requests.exceptions.Timeout,
+                requests.exceptions.ProxyError,
+                OSError) as e:
             self._set_sesh_proxy()
             return self._get_html_page(url=url)
-
-
-
-    
-    # def _get_html_page(self, url: str) -> tuple:
-    #     """Performs a GET request to the url"""
-    #     with self.limiter:
-    #         r = self.sesh.get(url, verify=self.verify)
-    #     main_logger.debug("Got status %s for %s", r.status_code, url)
-    #     if r.status_code != 200:
-    #         main_logger.warning(
-    #             "Url %s got bad status %s", url, r.status_code
-    #         )
-    #     if 400 <= r.status_code < 500:
-    #         msg = f"Bad request for {url}"
-    #         e = ValueError(msg)
-    #         main_logger.error(e)
-    #         return r.text, e
-    #     elif r.status_code >= 500:
-    #         msg = f"Server error for {url}"
-    #         e = ValueError(msg)
-    #         main_logger.error(e)
-    #         return r.text, e
-    #     else:
-    #         return r.text, None
         
     def fetch_page(self, url: str, features: str) -> tuple:
         """
@@ -164,6 +149,7 @@ class ParariusGateway(BaseGateway):
         """
         Fetches all rentals from a pararius search resuts page
         """
+        call_results = 0
         links = page_soup.find_all("a")
         for link in links:
             listing = f"{self.base_url}{link.get('href')}"
@@ -175,6 +161,8 @@ class ParariusGateway(BaseGateway):
                 "%s is net new a rental listing", listing
             )
             self.session_listings.add(listing)
+            call_results += 1
+        return call_results
 
     @staticmethod
     def get_next_page_link(page_soup: bs4.BeautifulSoup):
@@ -188,6 +176,7 @@ class ParariusGateway(BaseGateway):
             return
         return next_page_el.find("a").get("href")
     
+    @retry.retry(exceptions=ZeroListingsFoundException, tries=-1, delay=2)
     def perform_search(self, search_url: str,
                        debug_mode: Optional[bool] = None):
         """
@@ -204,7 +193,16 @@ class ParariusGateway(BaseGateway):
             main_logger.error("Failed to fetch %s", search_url)
             raise e
         # get all rentals
-        self.get_all_rentals(page_soup=page_soup)
+        results = self.get_all_rentals(page_soup=page_soup)
+        if results == 0:
+            main_logger.warning(
+                "Did not locate listings for %s. Changing proxy to retry."
+            )
+            self._set_sesh_proxy()
+            e = ZeroListingsFoundException(
+                msg=f"Did not locate listings for {search_url}"
+            )
+            raise e
         main_logger.debug("Session listings at %s after searching %s",
                           len(self.session_listings), search_url)
         # check if last

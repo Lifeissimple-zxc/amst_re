@@ -6,6 +6,7 @@ import sys
 from logging import config
 
 import pandas as pd
+import requests
 
 from lib.deps import MAIN_CFG, SECRETS, CREATE_SQL
 from lib.gateways import tg, amst_re
@@ -21,22 +22,34 @@ main_logger = logging.getLogger("main_logger")
 
 RUN_UUID = str(uuid.uuid4())
 DEBUG = bool(int(sys.argv[2]))
-USE_PROX = bool(int(sys.argv[3]))
+PROXIES = sys.argv[3]
 
 main_logger.debug("Read all the constants")
 
-ssl_fetcher = proxy_fetcher.SSLProxiesFetcher(
+ssl_proxies_fetcher = proxy_fetcher.SSLProxiesFetcher(
     url=MAIN_CFG["proxies"]["sslproxies"]["url"]
 )
-proxies = ssl_fetcher.get_ssl_proxies()
-main_logger.debug("Fetched proxies")
+
+free_prx_fetcher = proxy_fetcher.FreeProxiesFetcher(
+    url=MAIN_CFG["proxies"]["freeproxy"]["url"],
+    headers=MAIN_CFG["proxies"]["freeproxy"]["headers"]
+)
+
 
 db = simple_db_wrapper.SimpleDb(db_path=MAIN_CFG["db"]["path"])
 db.run_create_sql(CREATE_SQL)
 main_logger.debug("Prepared database")
 
-if USE_PROX:
+# Pararius needs proxies
+if PROXIES == "ssl":
+    proxies = ssl_proxies_fetcher.get_proxies()
+    main_logger.debug("Fetched SSL proxies")
     pararius = amst_re.ParariusGateway(proxy_list=proxies,
+                                       **MAIN_CFG["pararius"])
+elif PROXIES == "free":
+    free_proxies = free_prx_fetcher.get_proxies()
+    main_logger.debug("Fetched free proxies")
+    pararius = amst_re.ParariusGateway(proxy_list=free_proxies,
                                        **MAIN_CFG["pararius"])
 else:
     pararius = amst_re.ParariusGateway(**MAIN_CFG["pararius"])
