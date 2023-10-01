@@ -235,18 +235,22 @@ class FundaGateway(BaseGateway):
         """
         script_tag = page_soup.find_all("script", {"type": "application/ld+json"})
         main_logger.debug("Located script tag")
-        json_data = json.loads(script_tag[0].contents[0])
-        main_logger.debug("Loaded listings data to json")
-        urls = set(
-            [item["url"] for item in json_data["itemListElement"]]
-            )
-        
-        res_count = len(urls)
-        main_logger.debug("Parsed listings to a set")
-        # Get net new urls and add to self
-        self.session_listings = self.session_listings.union(urls)
-        main_logger.debug("Saved listings within self")
-        return res_count
+        try:
+            json_data = json.loads(script_tag[0].contents[0])
+            main_logger.debug("Loaded listings data to json")
+            urls = set(
+                [item["url"] for item in json_data["itemListElement"]]
+                )
+            
+            res_count = len(urls)
+            main_logger.debug("Parsed listings to a set")
+            # Get net new urls and add to self
+            self.session_listings = self.session_listings.union(urls)
+            main_logger.debug("Saved listings within self")
+            return res_count
+        except IndexError:
+            main_logger.debug("No listings on page")
+            return 0
     
     def get_next_page_link(self, search_url: str):
         """Gets url of next page of the search"""

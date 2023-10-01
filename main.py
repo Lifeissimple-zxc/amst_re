@@ -6,7 +6,6 @@ import sys
 from logging import config
 
 import pandas as pd
-import requests
 
 from lib.deps import MAIN_CFG, SECRETS, CREATE_SQL
 from lib.gateways import tg, amst_re
@@ -40,7 +39,7 @@ db = simple_db_wrapper.SimpleDb(db_path=MAIN_CFG["db"]["path"])
 db.run_create_sql(CREATE_SQL)
 main_logger.debug("Prepared database")
 
-# Pararius needs proxies
+# Pararius needs proxies, ugly implemtation, will fix later maybe
 if PROXIES == "ssl":
     proxies = ssl_proxies_fetcher.get_proxies()
     main_logger.debug("Fetched SSL proxies")
