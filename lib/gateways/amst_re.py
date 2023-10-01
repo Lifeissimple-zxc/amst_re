@@ -196,7 +196,8 @@ class ParariusGateway(BaseGateway):
         results = self.get_all_rentals(page_soup=page_soup)
         if results == 0:
             main_logger.warning(
-                "Did not locate listings for %s. Changing proxy to retry."
+                "Did not locate listings for %s. Changing proxy to retry.",
+                search_url
             )
             self._set_sesh_proxy()
             e = ZeroListingsFoundException(

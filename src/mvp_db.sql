@@ -4,3 +4,7 @@ CREATE TABLE IF NOT EXISTS seen_ads (
     seen_on INT NOT NULL,
     run_uuid TEXT
 );
+
+CREATE TABLE IF NOT EXISTS bad_proxies (
+    proxy TEXT
+)

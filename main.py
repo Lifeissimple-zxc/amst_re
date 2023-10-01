@@ -7,7 +7,7 @@ from logging import config
 
 import pandas as pd
 
-from lib.deps import MAIN_CFG, SECRETS, CREATE_SQL
+from lib.deps import MAIN_CFG, SECRETS, CREATE_SQL_STATEMENTS
 from lib.gateways import tg, amst_re
 from lib import simple_db_wrapper
 from lib.gateways.base import proxy_fetcher
@@ -36,8 +36,10 @@ free_prx_fetcher = proxy_fetcher.FreeProxiesFetcher(
 
 
 db = simple_db_wrapper.SimpleDb(db_path=MAIN_CFG["db"]["path"])
-db.run_create_sql(CREATE_SQL)
+for stmt in CREATE_SQL_STATEMENTS:
+    db.run_create_sql(stmt)
 main_logger.debug("Prepared database")
+exit()
 
 # Pararius needs proxies, ugly implemtation, will fix later maybe
 if PROXIES == "ssl":
