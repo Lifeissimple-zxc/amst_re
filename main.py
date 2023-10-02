@@ -39,7 +39,6 @@ db = simple_db_wrapper.SimpleDb(db_path=MAIN_CFG["db"]["path"])
 for stmt in CREATE_SQL_STATEMENTS:
     db.run_create_sql(stmt)
 main_logger.debug("Prepared database")
-exit()
 
 # Pararius needs proxies, ugly implemtation, will fix later maybe
 if PROXIES == "ssl":
