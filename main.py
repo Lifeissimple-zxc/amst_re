@@ -54,8 +54,6 @@ else:
     pararius = amst_re.ParariusGateway(**MAIN_CFG["pararius"])
 funda = amst_re.FundaGateway(headers=MAIN_CFG["http_headers"], **MAIN_CFG["funda"])
 
-print(dir(pararius))
-
 telegram = tg.TelegramGateway(
     bot_secret=SECRETS["telegram"]["bot_secret"],
     base_url=SECRETS["telegram"]["base_url"],
