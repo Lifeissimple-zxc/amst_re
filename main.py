@@ -49,11 +49,12 @@ if PROXIES == "ssl":
 elif PROXIES == "free":
     free_proxies = free_prx_fetcher.get_proxies()
     main_logger.debug("Fetched free proxies")
-    pararius = amst_re.ParariusGateway(proxy_list=free_proxies,
-                                       **MAIN_CFG["pararius"])
+    pararius = amst_re.ParariusGateway(**MAIN_CFG["pararius"])
 else:
     pararius = amst_re.ParariusGateway(**MAIN_CFG["pararius"])
 funda = amst_re.FundaGateway(headers=MAIN_CFG["http_headers"], **MAIN_CFG["funda"])
+
+print(dir(pararius))
 
 telegram = tg.TelegramGateway(
     bot_secret=SECRETS["telegram"]["bot_secret"],
