@@ -176,7 +176,7 @@ class ParariusGateway(BaseGateway):
             return
         return next_page_el.find("a").get("href")
     
-    @retry.retry(exceptions=ZeroListingsFoundException, tries=-1, delay=2)
+    @retry.retry(exceptions=ZeroListingsFoundException, tries=50, delay=2)
     def perform_search(self, search_url: str,
                        debug_mode: Optional[bool] = None):
         """
@@ -199,7 +199,8 @@ class ParariusGateway(BaseGateway):
                 "Did not locate listings for %s. Changing proxy to retry.",
                 search_url
             )
-            self._set_sesh_proxy()
+            if self.proxy_list is not None:
+                self._set_sesh_proxy()
             e = ZeroListingsFoundException(
                 msg=f"Did not locate listings for {search_url}"
             )
