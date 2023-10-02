@@ -194,7 +194,7 @@ class ParariusGateway(BaseGateway):
             raise e
         # get all rentals
         results = self.get_all_rentals(page_soup=page_soup)
-        if results == 0 and self.proxy_list is not None:
+        if results == 0 and hasattr(self, "proxy_list"):
             main_logger.warning(
                 "Did not locate listings for %s. Changing proxy to retry.",
                 search_url
