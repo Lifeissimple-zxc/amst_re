@@ -6,9 +6,11 @@ import logging
 
 import requests
 
-from lib.gateways.base import rps_limiter
+from lib.gateways.base import rps_limiter, my_retry_sync
 
 main_logger = logging.getLogger("main_logger")
+
+MSG_CHAR_LIMIT = 4096
 
 class TelegramGateway:
     """
@@ -41,13 +43,22 @@ class TelegramGateway:
         """
         return f"{base_url}/bot{bot_secret}/{send_msg_endpoint}"
     
+    @staticmethod
+    def _truncate_to_char_limit(msg: str):
+        return msg[:MSG_CHAR_LIMIT]
+    
+    @my_retry_sync.simple_async_retry(
+        exceptions=(Exception,), logger=main_logger,
+        retries=5, delay=2
+    )
     def send_message(self, msg_str: str) -> requests.Response:
         """
         Sends a message to the chat_id provided in the constructor
         :return: tuple(response object, err if any)
         """
         msg_data = {
-            **self.base_message_data, **{"text": msg_str}
+            **self.base_message_data,
+            **{"text": self._truncate_to_char_limit(msg=msg_str)}
         }
         with self.limiter:
             r = self.sesh.post(url=self.send_msg_url, data=msg_data)

@@ -2,22 +2,63 @@ version: 1
 
 formatters:
   main:
-    format: "[%(asctime)s - %(levelname)s - %(funcName)s()]\t %(message)s"
+    format: "[%(asctime)s - %(name)s - %(levelname)s - %(filename)s::%(lineno)d - %(funcName)s()]\t %(message)s"
+
+filters:
+  TGFilter:
+    (): "lib.tools.my_logger.AttributeFilter"
+    attr_name: "to_tg"
+    allow_value: True
+    default_value: False
+  TGErrorFilter:
+    (): "lib.tools.my_logger.LevelFilter"
+    level: "WARNING"
+  TGSilencer:
+    (): "lib.tools.my_logger.AttributeFilter"
+    attr_name: "skip_tg"
+    allow_value: False
+    default_value: False
 
 handlers:
   StreamHandler:
     class: "logging.StreamHandler"
     formatter: "main"
-  RotatingFile:
-    (): "logging.handlers.TimedRotatingFileHandler"
-    filename: "logs/amst_re.log"
-    when: "midnight"
-    utc: True
+  BackupFileHandler:
+    class: "lib.tools.my_logger.BackupFileHandler"
     formatter: "main"
+    folder: "logs"
+    file: "amst_re.log"
+  TGHandler:
+    (): "lib.tools.my_logger.TGHandler"
+    gw: "ext://lib.configuration.TG_GW"
+    filters:
+      - "TGFilter"
+  TGErrorHandler:
+    (): "lib.tools.my_logger.TGHandler"
+    gw: "ext://lib.configuration.TG_GW"
+    filters:
+      - "TGErrorFilter"
+      - "TGSilencer"
+
+  ZZZQListenerHandler:
+    (): "lib.tools.my_logger.QListenerHandler"
+    queue: "ext://lib.tools.my_logger._LOG_QUEUE"
+    handler_list:
+      - "cfg://handlers.BackupFileHandler"
+      - "cfg://handlers.TGHandler"
+      - "cfg://handlers.TGErrorHandler"
 
 loggers:
   main_logger:
     level: "DEBUG"
     handlers:
       - "StreamHandler"
-      - "RotatingFile"
+      - "ZZZQListenerHandler"
+    propagate: false
+  backup_logger:
+    level: "DEBUG"
+    handlers:
+      - "StreamHandler"
+      - "BackupFileHandler"
+    propagate: false
+
