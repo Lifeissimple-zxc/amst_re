@@ -20,5 +20,6 @@ extend-select = [
 
 extend-exclude = [
     "env",
-    ".yaml"
+    ".yaml",
+    "__init__.py"
 ]

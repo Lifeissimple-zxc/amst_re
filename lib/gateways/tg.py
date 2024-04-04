@@ -5,8 +5,9 @@ import atexit
 import logging
 
 import requests
+from typing import Optional
 
-from lib.gateways.base import rps_limiter, my_retry_sync
+from lib.gateways.base import my_retry_sync, rps_limiter
 
 main_logger = logging.getLogger("main_logger")
 
@@ -17,7 +18,8 @@ class TelegramGateway:
     Sends messages to telegram using a bot
     """
     def __init__(self, bot_secret: str, base_url: str,
-                 chat_id: int, send_msg_endpoint: str,
+                 chat_id: int, log_chat_id: int,
+                 send_msg_endpoint: str,
                  rps: float, concurrent_requests: int = None):
         """
         Constructor of the class
@@ -31,6 +33,7 @@ class TelegramGateway:
             rps=rps, concurrent_requests=concurrent_requests
         )
         self.base_message_data = {"chat_id": chat_id}
+        self.log_message_data = {"chat_id": log_chat_id}
         self.sesh = requests.session()
         atexit.register(self.sesh.close)
         
@@ -51,15 +54,19 @@ class TelegramGateway:
         exceptions=(Exception,), logger=main_logger,
         retries=5, delay=2
     )
-    def send_message(self, msg_str: str) -> requests.Response:
+    def send_message(self, msg_str: str,
+                     is_log: Optional[bool] = None) -> requests.Response:
         """
         Sends a message to the chat_id provided in the constructor
         :return: tuple(response object, err if any)
         """
-        msg_data = {
-            **self.base_message_data,
-            **{"text": self._truncate_to_char_limit(msg=msg_str)}
-        }
+        if is_log is None:
+            is_log = False
+        msg_text = self._truncate_to_char_limit(msg=msg_str)
+        msg_data = {**self.base_message_data, **{"text": msg_text}}
+        if is_log:
+            msg_data = {**self.log_message_data, **{"text": msg_text}}
+        
         with self.limiter:
             r = self.sesh.post(url=self.send_msg_url, data=msg_data)
         return r

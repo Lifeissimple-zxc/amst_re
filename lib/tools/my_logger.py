@@ -179,7 +179,7 @@ class TGHandler(logging.Handler):
         return msg_str
 
     def _log_to_tg(self, record: logging.LogRecord) -> None:
-        self.gw.send_message(self._prepare_message(record=record))
+        self.gw.send_message(self._prepare_message(record=record), is_log=True)
 
     def emit(self, record: logging.LogRecord) -> None:
         """

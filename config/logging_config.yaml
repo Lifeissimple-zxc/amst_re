@@ -30,12 +30,12 @@ handlers:
     file: "amst_re.log"
   TGHandler:
     (): "lib.tools.my_logger.TGHandler"
-    gw: "ext://lib.configuration.TG_GW"
+    gw: "ext://lib.deps.TG_GW"
     filters:
       - "TGFilter"
   TGErrorHandler:
     (): "lib.tools.my_logger.TGHandler"
-    gw: "ext://lib.configuration.TG_GW"
+    gw: "ext://lib.deps.TG_GW"
     filters:
       - "TGErrorFilter"
       - "TGSilencer"
