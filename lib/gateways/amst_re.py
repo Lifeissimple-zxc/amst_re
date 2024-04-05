@@ -2,8 +2,8 @@
 Implements gateways to fetch data from NL real estate data sources
 """
 import atexit
-import logging
 import json
+import logging
 import re
 from typing import Optional
 
@@ -14,6 +14,14 @@ import retry
 from lib.gateways.base import rps_limiter
 
 main_logger = logging.getLogger("main_logger")
+
+# Parsing mode constants
+PARSING_MODE_RENT = 0
+PARSING_MODE_BUY = 1
+PARSING_MODES = {
+    "rent": PARSING_MODE_RENT,
+    "buy": PARSING_MODE_BUY
+}
 
 class ZeroListingsFoundException(ValueError):
     """
@@ -32,11 +40,12 @@ class BaseGateway:
         """Constructor of the class"""
         self.get_timeout = 10
         # Verify is false as long as proxies are not in use
-        self.verify = False
+        self.verify = True
         self.sesh = requests.session()
         if proxy_list is not None:
             self.proxy_list = iter(proxy_list)
             self._set_sesh_proxy()
+            self.verify = False
         # Set headers if we have any
         if headers is not None:
             self.sesh.headers.update(headers)
@@ -177,10 +186,10 @@ class ParariusGateway(BaseGateway):
         return next_page_el.find("a").get("href")
     
     @retry.retry(exceptions=ZeroListingsFoundException, tries=50, delay=2)
-    def perform_search(self, search_url: str,
+    def search_rentals(self, search_url: str,
                        debug_mode: Optional[bool] = None):
         """
-        Performs a search on one search url
+        Performs a search for rentals
         """
         if debug_mode is None:
             debug_mode = True
@@ -211,8 +220,28 @@ class ParariusGateway(BaseGateway):
         if next_p is None:
             return
 
-        self.perform_search(search_url=f"{self.base_url}{next_p}",
+        self.search_rentals(search_url=f"{self.base_url}{next_p}",
                             debug_mode=debug_mode)
+        
+    @retry.retry(exceptions=ZeroListingsFoundException, tries=50, delay=2)
+    def search_buy(self, search_url: str,
+                   debug_mode: Optional[bool] = None):
+        raise NotImplementedError("TODO")
+    
+    def perform_search(self, search_url: str, mode: int,
+                       debug_mode: Optional[bool] = None):
+        """
+        Performs a search on one search url
+        """
+        main_logger.debug("Attempting a search with mode %s", mode)
+        if mode == PARSING_MODE_BUY:
+            self.search_buy(search_url=search_url,
+                            debug_mode=debug_mode)
+        elif mode == PARSING_MODE_RENT:
+            self.search_rentals(search_url=search_url,
+                                debug_mode=debug_mode)
+        else:
+            raise NotImplementedError("Unexpcted search mode")
 
 
 class FundaGateway(BaseGateway):
@@ -272,8 +301,8 @@ class FundaGateway(BaseGateway):
             next_url = f"{search_url}&search_result=2"
         return next_url
     
-    def perform_search(self, search_url: str,
-                       debug_mode: Optional[bool] = None):
+    def _perform_search(self, search_url: str,
+                        debug_mode: Optional[bool] = None):
         """
         Performs a search on one search url (recursively reads different result pages)
         """
@@ -296,8 +325,13 @@ class FundaGateway(BaseGateway):
         # First time we call a url, it does not have search_result
         next_url = self.get_next_page_link(search_url=search_url)
         
-        self.perform_search(search_url=next_url, debug_mode=debug_mode)
+        self._perform_search(search_url=next_url, debug_mode=debug_mode)
 
-
-
-
+    def perform_search(self, search_url: str, mode: int,
+                       debug_mode: Optional[bool] = None):
+        """
+        Performs a search on one search url (recursively reads different result pages)
+        """
+        main_logger.debug("Search with %s mode", mode)
+        self._perform_search(search_url=search_url, debug_mode=debug_mode)
+       

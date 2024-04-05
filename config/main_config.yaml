@@ -22,7 +22,15 @@ funda:
 
 
 telegram:
-  rps: 0.3
+  rps: 0.5
+
+google:
+  init:
+    service_acc_path: "secrets/google.json"
+    read_rps: 1
+    write_rps: 1
+  sheet_id: "1zCNFFkBQ5_XuErhdVeB2RK9LP7lVCt_3gF3Ddw7ScCM"
+  search_urls_tab: "purchase_search_urls"
 
 http_headers:
   user-agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36"
