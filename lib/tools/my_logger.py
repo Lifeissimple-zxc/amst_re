@@ -175,7 +175,7 @@ class TGHandler(logging.Handler):
         msg_str = f"{self.format(record)}"
         # Add urgency if record message is above warning + tag POCs
         if record.levelno >= 30:
-            msg_str = f":warning: {msg_str}"
+            msg_str = f"\u26A0\uFE0F {msg_str}"
         return msg_str
 
     def _log_to_tg(self, record: logging.LogRecord) -> None:
