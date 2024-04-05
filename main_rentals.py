@@ -1,17 +1,19 @@
-import yaml
-import uuid
-import time
+"""
+Main script for monitoring rentals
+"""
 import logging
 import sys
+import time
+import uuid
 from logging import config
 
 import pandas as pd
+import yaml
 
-from lib.deps import MAIN_CFG, SECRETS, CREATE_SQL_STATEMENTS
-from lib.gateways import tg, amst_re
 from lib import simple_db_wrapper
+from lib.deps import CREATE_SQL_STATEMENTS, MAIN_CFG, SECRETS, TG_GW
+from lib.gateways import amst_re, tg
 from lib.gateways.base import proxy_fetcher
-
 
 # Logging boilerplate
 with open("config/logging_config.yaml") as _f:
