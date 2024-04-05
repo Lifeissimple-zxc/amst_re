@@ -114,7 +114,7 @@ def main():
                     "Sending an alert on %s, search class in %s",
                     listing, parser
                 )
-                r = TG_GW.send_message(f"New listing: \n{listing}")
+                r = TG_GW.send_message(f"New listing ({MODE}): \n{listing}")
                 if r.status_code != 200:
                     main_logger.warning("Message failed for %s", listing)
 

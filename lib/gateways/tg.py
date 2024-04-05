@@ -36,7 +36,6 @@ class TelegramGateway:
         self.log_message_data = {"chat_id": log_chat_id}
         self.sesh = requests.session()
         # self.sesh.headers.update({"Content-Type": "application/json"})
-        print(self.sesh.headers)
         atexit.register(self.sesh.close)
         
 
