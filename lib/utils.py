@@ -10,6 +10,8 @@ def choose_gateway(url: str, pararius: amst_re.ParariusGateway,
     worker_class = None
     if "pararius" in url:
         worker_class = pararius
+        if not hasattr(worker_class, "proxy_list"):
+            return ValueError("no value in running pararius withou proxies")
     elif "funda" in url:
         worker_class = funda
     else:
