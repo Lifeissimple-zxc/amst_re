@@ -44,8 +44,6 @@ class BaseGateway:
         self.sesh = requests.session()
         if proxy_list is not None:
             self.proxy_list = iter(proxy_list)
-            self._set_sesh_proxy()
-            self.verify = False
         # Set headers if we have any
         if headers is not None:
             self.sesh.headers.update(headers)
@@ -100,6 +98,7 @@ class BaseGateway:
         try:
             with self.limiter:
                 r = self.sesh.get(url, verify=self.verify, timeout=self.get_timeout)
+                main_logger.debug("status code: %s", r.status_code)
             data, e = self._process_response(url=url, r=r)
             if e is None:
                 return data, e
@@ -157,6 +156,9 @@ class ParariusGateway(BaseGateway):
         self.session_listings = set()
         self.auth_url = auth_url
         self._get_token()
+        if hasattr(self, "proxy_list") and self.proxy_list is not None:
+            self._set_sesh_proxy()
+            self.verify = False
 
     def _get_token(self):
         "Fetches pararius auth token and stores within self.sesh"
@@ -165,7 +167,7 @@ class ParariusGateway(BaseGateway):
             len(self.sesh.cookies.items())
         )
         try:
-            r = self.sesh.get(url=self.auth_url)
+            r = self.sesh.get(url=self.auth_url, timeout=self.get_timeout)
         except Exception as e:
             main_logger.error("error pararius auth, listings will not be fetched: %s", e)  # noqa: E501
             return
@@ -241,9 +243,8 @@ class ParariusGateway(BaseGateway):
                                         base_url=base_url)
         if results == 0:
             main_logger.warning(
-                "Did not locate listings for %s. Updating cookies", search_url
+                "Did not locate listings for %s.", search_url
             )
-            self._get_token()
             if hasattr(self, "proxy_list"):
                 main_logger.warning("updating proxies")
                 self._set_sesh_proxy()
@@ -275,6 +276,9 @@ class FundaGateway(BaseGateway):
         self.results_per_page = results_per_page
         self.next_page_pattern = next_page_pattern
         self.session_listings = set()
+        if hasattr(self, "proxy_list") and self.proxy_list is not None:
+            self._set_sesh_proxy()
+            self.verify = False
 
     def get_all_rentals(self, page_soup: bs4.BeautifulSoup):
         """
