@@ -242,11 +242,11 @@ class ParariusGateway(BaseGateway):
         results = self.get_all_listings(page_soup=page_soup, mode=mode,
                                         base_url=base_url)
         if results == 0:
-            main_logger.warning(
+            main_logger.debug(
                 "Did not locate listings for %s.", search_url
             )
             if hasattr(self, "proxy_list"):
-                main_logger.warning("updating proxies")
+                main_logger.debug("updating proxies")
                 self._set_sesh_proxy()
             raise ZeroListingsFoundException(
                 msg=f"Did not locate listings for {search_url}"
