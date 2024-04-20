@@ -140,7 +140,8 @@ class ParariusGateway(BaseGateway):
     """
     Class fetches data from pararius.com
     """
-    def __init__(self, rental_listing_pattern: str, base_url: str,
+    def __init__(self, rental_listing_pattern: str, base_urls: dict,
+                 buy_listing_pattern: str, auth_url: str,
                  rps: float, headers: dict = None,
                  concurrent_requests: int = None,
                  proxy_list: Optional[list] = None):
@@ -151,20 +152,46 @@ class ParariusGateway(BaseGateway):
                          concurrent_requests=concurrent_requests,
                          proxy_list=proxy_list)
         self.rental_listing_pattern = rental_listing_pattern
-        self.base_url = base_url
+        self.buy_listing_pattern = buy_listing_pattern
+        self.base_urls = base_urls
         self.session_listings = set()
+        self.auth_url = auth_url
+        self._get_token()
 
-    def get_all_rentals(self, page_soup: bs4.BeautifulSoup):
+    def _get_token(self):
+        "Fetches pararius auth token and stores within self.sesh"
+        main_logger.debug(
+            "cookie len before auth: %s",
+            len(self.sesh.cookies.items())
+        )
+        try:
+            r = self.sesh.get(url=self.auth_url)
+        except Exception as e:
+            main_logger.error("error pararius auth, listings will not be fetched: %s", e)  # noqa: E501
+            return
+        main_logger.debug("fetched auth cookie %s", r.cookies)
+        self.sesh.cookies = r.cookies
+        main_logger.debug("cookie set to %s", self.sesh.cookies)
+
+    
+    def get_all_listings(self, page_soup: bs4.BeautifulSoup,
+                         mode: int, base_url: str):
         """
-        Fetches all rentals from a pararius search resuts page
+        Fetches all listings from a pararius search resuts page
         """
         call_results = 0
+        pattern_to_check = (
+            self.rental_listing_pattern if mode == PARSING_MODE_RENT
+            else self.buy_listing_pattern
+        )
         links = page_soup.find_all("a")
         for link in links:
-            listing = f"{self.base_url}{link.get('href')}"
+            listing = f"{base_url}{link.get('href')}"
             if listing in self.session_listings:
                 continue
-            if self.rental_listing_pattern not in listing:
+            if pattern_to_check not in listing:
+                main_logger.debug("%s does not meet %s pattern",
+                                  listing, pattern_to_check)
                 continue
             main_logger.debug(
                 "%s is net new a rental listing", listing
@@ -184,64 +211,54 @@ class ParariusGateway(BaseGateway):
             main_logger.debug("Reached the last page of search")
             return
         return next_page_el.find("a").get("href")
-    
+
     @retry.retry(exceptions=ZeroListingsFoundException, tries=50, delay=2)
-    def search_rentals(self, search_url: str,
+    def perform_search(self, search_url: str, mode: int,
                        debug_mode: Optional[bool] = None):
         """
-        Performs a search for rentals
+        Performs a search on one search url
         """
+        if mode not in {PARSING_MODE_BUY, PARSING_MODE_RENT}:
+            raise NotImplementedError("Unexpcted search mode")
+        main_logger.debug("Attempting a search with mode %s", mode)
         if debug_mode is None:
             debug_mode = True
         main_logger.debug("Searching for %s with debug mode %s",
                           search_url, debug_mode)
+        
         page_soup, e = self.fetch_page(url=search_url, features="html.parser")
         if debug_mode:
             main_logger.debug("Page soup for url %s: %s", search_url, page_soup) 
         if e is not None:
             main_logger.error("Failed to fetch %s", search_url)
             raise e
-        # get all rentals
-        results = self.get_all_rentals(page_soup=page_soup)
-        if results == 0 and hasattr(self, "proxy_list"):
+        
+        base_url = (
+            self.base_urls["rent"] if mode == PARSING_MODE_RENT
+            else self.base_urls["buy"]
+        )
+        results = self.get_all_listings(page_soup=page_soup, mode=mode,
+                                        base_url=base_url)
+        if results == 0:
             main_logger.warning(
-                "Did not locate listings for %s. Changing proxy to retry.",
-                search_url
+                "Did not locate listings for %s. Updating cookies", search_url
             )
-            self._set_sesh_proxy()
-            e = ZeroListingsFoundException(
+            self._get_token()
+            if hasattr(self, "proxy_list"):
+                main_logger.warning("updating proxies")
+                self._set_sesh_proxy()
+            raise ZeroListingsFoundException(
                 msg=f"Did not locate listings for {search_url}"
             )
-            raise e
         main_logger.debug("Session listings at %s after searching %s",
                           len(self.session_listings), search_url)
         # check if last
         next_p = self.get_next_page_link(page_soup=page_soup)
         if next_p is None:
             return
-
-        self.search_rentals(search_url=f"{self.base_url}{next_p}",
-                            debug_mode=debug_mode)
-        
-    @retry.retry(exceptions=ZeroListingsFoundException, tries=50, delay=2)
-    def search_buy(self, search_url: str,
-                   debug_mode: Optional[bool] = None):
-        raise NotImplementedError("TODO")
-    
-    def perform_search(self, search_url: str, mode: int,
-                       debug_mode: Optional[bool] = None):
-        """
-        Performs a search on one search url
-        """
-        main_logger.debug("Attempting a search with mode %s", mode)
-        if mode == PARSING_MODE_BUY:
-            self.search_buy(search_url=search_url,
-                            debug_mode=debug_mode)
-        elif mode == PARSING_MODE_RENT:
-            self.search_rentals(search_url=search_url,
-                                debug_mode=debug_mode)
-        else:
-            raise NotImplementedError("Unexpcted search mode")
+        # recursive call, we don't get here if the page was last
+        self.perform_search(search_url=f"{base_url}{next_p}",
+                            mode=mode, debug_mode=debug_mode)
 
 
 class FundaGateway(BaseGateway):

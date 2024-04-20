@@ -12,7 +12,11 @@ db:
 
 pararius:
   rental_listing_pattern: "for-rent"
-  base_url: "https://pararius.com"
+  buy_listing_pattern: "-te-koop"
+  base_urls:
+    rent: "https://pararius.com"
+    buy: "https://pararius.nl"
+  auth_url: "https://www.pararius.nl/cgi-bin/fl/js/verify"
   rps: 0.5
 
 funda:
