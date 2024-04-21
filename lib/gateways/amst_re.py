@@ -67,7 +67,7 @@ class BaseGateway:
             )
         except StopIteration as e:
             main_logger.error("Ran out of proxies, stopping execution")
-            raise e
+            return e
 
     @staticmethod
     def _process_response(url: str, r: requests.Response):
@@ -112,12 +112,16 @@ class BaseGateway:
                     "No proxies suppliled, can't perfrom recursive calls"
                 )
                 return data, e
-            self._set_sesh_proxy()
+            e = self._set_sesh_proxy()
+            if e is not None:
+                return data, e
             return self._get_html_page(url=url)
         except (requests.exceptions.Timeout,
                 requests.exceptions.ProxyError,
                 OSError) as e:
-            self._set_sesh_proxy()
+            e = self._set_sesh_proxy()
+            if e is not None:
+                return data, e
             return self._get_html_page(url=url)
         
     def fetch_page(self, url: str, features: str) -> tuple:
@@ -162,7 +166,10 @@ class ParariusGateway(BaseGateway):
         self.auth_url = auth_url
         self._get_token()
         if hasattr(self, "proxy_list") and self.proxy_list is not None:
-            self._set_sesh_proxy()
+            e = self._set_sesh_proxy()
+            if e is not None:
+                main_logger.error("failed to configure auth for pararius, terminating: %s", e)  # noqa: E501
+                raise e
             self.verify = False
 
     def _get_token(self):
@@ -219,7 +226,7 @@ class ParariusGateway(BaseGateway):
             return
         return next_page_el.find("a").get("href")
 
-    @retry.retry(exceptions=ZeroListingsFoundException, tries=30, delay=2, backoff=2)  # noqa: E501
+    @retry.retry(exceptions=ZeroListingsFoundException, tries=3, delay=2, backoff=2)  # noqa: E501
     def perform_search(self, search_url: str, mode: int,
                        debug_mode: Optional[bool] = None):
         """
@@ -252,7 +259,10 @@ class ParariusGateway(BaseGateway):
             )
             if hasattr(self, "proxy_list"):
                 main_logger.debug("updating proxies")
-                self._set_sesh_proxy()
+                e = self._set_sesh_proxy()
+                if e is not None:
+                    main_logger.debug("run out of proxies")
+                    return
             raise ZeroListingsFoundException(
                 msg=f"Did not locate listings for {search_url}"
             )
@@ -282,7 +292,9 @@ class FundaGateway(BaseGateway):
         self.next_page_pattern = next_page_pattern
         self.session_listings = set()
         if hasattr(self, "proxy_list") and self.proxy_list is not None:
-            self._set_sesh_proxy()
+            e = self._set_sesh_proxy()
+            if e is not None:
+                raise e
             self.verify = False
 
     def get_all_rentals(self, page_soup: bs4.BeautifulSoup):

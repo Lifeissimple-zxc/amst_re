@@ -94,11 +94,15 @@ def main():
             )
             continue
         
-        parser.perform_search(
-            search_url=search,
-            debug_mode=DEBUG,
-            mode=amst_re.PARSING_MODES[MODE]
-        )
+        try:
+            parser.perform_search(
+                search_url=search,
+                debug_mode=DEBUG,
+                mode=amst_re.PARSING_MODES[MODE]
+            )
+        except amst_re.ZeroListingsFoundException as e:
+            main_logger.warning("no listings found for %s after retries", search)
+            continue
         net_new_listings = parser.session_listings.difference(current_urls)
         main_logger.debug("Done with %s", search)
         main_logger.debug("Got %s net new listings", len(net_new_listings))
