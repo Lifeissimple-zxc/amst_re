@@ -79,7 +79,12 @@ class BaseGateway:
             main_logger.warning(
                 "Url %s got bad status %s", url, r.status_code
             )
-        if 400 <= r.status_code < 500:
+        if r.status_code == 403:
+            msg = f"Access to {url} is forbidden :("
+            e = ValueError(msg)
+            main_logger.error(e, extra={"skip_tg": True})
+            return r.text, e
+        elif 400 <= r.status_code < 500:
             msg = f"Bad request for {url}"
             e = ValueError(msg)
             main_logger.error(e)
