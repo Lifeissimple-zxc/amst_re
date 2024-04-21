@@ -219,7 +219,7 @@ class ParariusGateway(BaseGateway):
             return
         return next_page_el.find("a").get("href")
 
-    @retry.retry(exceptions=ZeroListingsFoundException, tries=50, delay=2)
+    @retry.retry(exceptions=ZeroListingsFoundException, tries=30, delay=2, backoff=2)  # noqa: E501
     def perform_search(self, search_url: str, mode: int,
                        debug_mode: Optional[bool] = None):
         """
