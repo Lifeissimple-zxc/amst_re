@@ -244,8 +244,8 @@ class ParariusGateway(BaseGateway):
         if debug_mode:
             main_logger.debug("Page soup for url %s: %s", search_url, page_soup) 
         if e is not None:
-            main_logger.error("Failed to fetch %s", search_url)
-            raise e
+            main_logger.error("Failed to fetch %s, stopping search", search_url)
+            return
         
         base_url = (
             self.base_urls["rent"] if mode == PARSING_MODE_RENT
@@ -351,8 +351,8 @@ class FundaGateway(BaseGateway):
         if debug_mode:
             main_logger.debug("Page soup for url %s: %s", search_url, page_soup) 
         if e is not None:
-            main_logger.error("Failed to fetch %s", search_url)
-            raise e
+            main_logger.error("Failed to fetch %s, stopping search", search_url)
+            return
         res_cnt = self.get_all_rentals(page_soup=page_soup)
         main_logger.debug("Session listings at %s after searching %s",
                           len(self.session_listings), search_url)
