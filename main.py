@@ -84,12 +84,14 @@ def main():
         raise e
     # Perform search
     for search in search_df["url"].to_list():
-        # TODO implement pararius
         parser = utils.choose_gateway(
             url=search, pararius=pararius, funda=funda
         )
         if isinstance(parser, ValueError):
-            main_logger.warning("Got error %s for %s", parser, search)
+            main_logger.warning(
+                "Got error %s for %s", parser, search,
+                extra={"skip_tg": True}
+            )
             continue
         
         parser.perform_search(
@@ -97,10 +99,7 @@ def main():
             debug_mode=DEBUG,
             mode=amst_re.PARSING_MODES[MODE]
         )
-        net_new_listings = parser.session_listings.difference(
-            current_urls
-        )
-        
+        net_new_listings = parser.session_listings.difference(current_urls)
         main_logger.debug("Done with %s", search)
         main_logger.debug("Got %s net new listings", len(net_new_listings))
         if len(net_new_listings) == 0:
@@ -125,7 +124,6 @@ def main():
         temp_df["run_uuid"] = RUN_UUID
         temp_df["seen_on"] = int(time.time()*1000)
         main_logger.debug("Prepared interim df")
-
         new_data = pd.concat(objs=[new_data, temp_df],
                              ignore_index=True, sort=False)
     
