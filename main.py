@@ -23,6 +23,9 @@ main_logger = logging.getLogger("main_logger")
 
 RUN_UUID = str(uuid.uuid4())
 DEBUG = bool(int(sys.argv[2]))
+if not DEBUG:
+    main_logger.setLevel(logging.INFO)
+
 PROXIES = sys.argv[3]
 MODE = "rent"
 if len(sys.argv) > 4:

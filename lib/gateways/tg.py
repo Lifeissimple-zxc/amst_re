@@ -71,7 +71,7 @@ class TelegramGateway:
         main_logger.debug("sending a TG message: %s", msg_data)
         with self.limiter:
             r = self.sesh.post(url=self.send_msg_url, data=msg_data)
-        main_logger.debug("TG response status: %s. Resp: %s",
+        main_logger.info("TG response status: %s. Resp: %s",
                           r.status_code, r.text)
         if 500 < r.status_code <= 600:
             raise ex.CustomRetriableException(

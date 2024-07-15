@@ -58,7 +58,7 @@ class BaseGateway:
         """
         try:
             curr_prox = next(self.proxy_list)
-            main_logger.debug("Updating sesh proxy to %s", curr_prox)
+            main_logger.info("Updating sesh proxy to %s", curr_prox)
             self.sesh.proxies.update(
                 {
                     "http": curr_prox,
@@ -74,10 +74,10 @@ class BaseGateway:
         """
         Converts respone to a tuple of data, err form
         """
-        main_logger.debug("Got status %s for %s", r.status_code, url)
+        main_logger.info("Got status %s for %s", r.status_code, url)
         if r.status_code != 200:
             main_logger.warning(
-                "Url %s got bad status %s", url, r.status_code
+                "URL %s got bad status %s", url, r.status_code
             )
         if r.status_code == 403:
             msg = f"Access to {url} is forbidden :("
@@ -87,12 +87,12 @@ class BaseGateway:
         elif 400 <= r.status_code < 500:
             msg = f"Bad request for {url}"
             e = ValueError(msg)
-            main_logger.error(e)
+            main_logger.error(e, exc_info=True)
             return r.text, e
         elif r.status_code >= 500:
             msg = f"Server error for {url}"
             e = ValueError(msg)
-            main_logger.error(e)
+            main_logger.error(e, exc_info=True)
             return r.text, e
         else:
             return r.text, None
@@ -103,7 +103,7 @@ class BaseGateway:
         try:
             with self.limiter:
                 r = self.sesh.get(url, verify=self.verify, timeout=self.get_timeout)
-                main_logger.debug("status code: %s", r.status_code)
+                main_logger.info("status code: %s", r.status_code)
             data, e = self._process_response(url=url, r=r)
             if e is None:
                 return data, e
@@ -138,8 +138,9 @@ class BaseGateway:
             page_data = bs4.BeautifulSoup(markup=page, features=features)
             return page_data, None
         except Exception as e:
-            main_logger.exception(
-                "Can't parse page data from %s to bs4, this is bad.", url
+            main_logger.error(
+                "Can't parse page data from %s to bs4, this is bad.",
+                url, exc_info=True
             )
             return None, e
         
@@ -204,12 +205,10 @@ class ParariusGateway(BaseGateway):
             if listing in self.session_listings:
                 continue
             if pattern_to_check not in listing:
-                main_logger.debug("%s does not meet %s pattern",
+                main_logger.info("%s does not meet %s pattern",
                                   listing, pattern_to_check)
                 continue
-            main_logger.debug(
-                "%s is net new a rental listing", listing
-            )
+            main_logger.info("%s is net new a rental listing", listing)
             self.session_listings.add(listing)
             call_results += 1
         return call_results
@@ -222,7 +221,7 @@ class ParariusGateway(BaseGateway):
             "li.pagination__item.pagination__item--next"
         )
         if next_page_el is None:
-            main_logger.debug("Reached the last page of search")
+            main_logger.info("Reached the last page of search")
             return
         return next_page_el.find("a").get("href")
 
@@ -234,10 +233,10 @@ class ParariusGateway(BaseGateway):
         """
         if mode not in {PARSING_MODE_BUY, PARSING_MODE_RENT}:
             raise NotImplementedError("Unexpcted search mode")
-        main_logger.debug("Attempting a search with mode %s", mode)
+        main_logger.info("Attempting a search with mode %s", mode)
         if debug_mode is None:
             debug_mode = True
-        main_logger.debug("Searching for %s with debug mode %s",
+        main_logger.info("Searching for %s with debug mode %s",
                           search_url, debug_mode)
         
         page_soup, e = self.fetch_page(url=search_url, features="html.parser")
@@ -254,9 +253,7 @@ class ParariusGateway(BaseGateway):
         results = self.get_all_listings(page_soup=page_soup, mode=mode,
                                         base_url=base_url)
         if results == 0:
-            main_logger.debug(
-                "Did not locate listings for %s.", search_url
-            )
+            main_logger.info("Did not locate listings for %s.", search_url)
             if hasattr(self, "proxy_list"):
                 main_logger.debug("updating proxies")
                 e = self._set_sesh_proxy()

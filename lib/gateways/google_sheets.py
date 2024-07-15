@@ -51,8 +51,6 @@ class GoogleSheetMapper:
         """
         header_index = header_rownum-1
         header = sheet_values[header_index]
-        main_logger.debug("header row fetched: %s. Index used: %s",
-                          header, header_index)
         # Drop rows we want to skip based on params
         del sheet_values[header_index:header_index+1+header_offset]
         return header, sheet_values
@@ -173,8 +171,6 @@ class GoogleSheetMapper:
             main_logger.error("Error parsing schema to aliases: %s", e)
             return None, e
         df = df.select(pl_aliases)
-        main_logger.debug("Aliased columns to internal names: %s", df)
-        main_logger.debug("Parsing columns")
         return self.parse_cols(df=df, schema=schema)
 
 
@@ -185,10 +181,9 @@ class GoogleSheetMapper:
         """
         main_logger.debug("Looking tab id for %s in %s",
                           tab_name, tab_properties)
-
         if (tab_data := tab_properties.get(tab_name, None)) is None:
             e = KeyError(f"{tab_name} is not present in: {tab_data}")
-            main_logger.debug("Error locating tab data for %s: %s", tab_name, e)
+            main_logger.error("Error locating tab data for %s: %s", tab_name, e)
             return None, e
 
         main_logger.debug("Located tab data: %s", tab_data)
@@ -387,7 +382,7 @@ class GoogleSheetsGateway(GoogleSheetMapper):
             return None, ValueError(
                 f"Bad request type {req_type}. Need {R_REQUEST} or {W_REQUEST}"  # noqa: E501
             )
-        main_logger.debug("making request of type %s to sheet %s", req_type, sheet_id)  # noqa: E501
+        main_logger.info("making request of type %s to sheet %s", req_type, sheet_id)  # noqa: E501
         try:
             return self.__make_request(req=req, rps_limiter=limiter), None
         except GoogleSheetRetriableError as e:
@@ -461,10 +456,11 @@ class GoogleSheetsGateway(GoogleSheetMapper):
         resp, e = self._make_request(sheet_id=sheet_id,
                                      req=req, req_type=R_REQUEST)
         if e is not None:
-            main_logger.error("read_sheet error for sheet %s: %s", sheet_id, e)
+            main_logger.error("read_sheet error for sheet %s: %s",
+                              sheet_id, e, exc_info=True)
             return None, e
         sheet_values = resp["values"]
-        main_logger.info("read_sheet ok for sheet: %s", sheet_values)
+        main_logger.info("read_sheet ok for sheet: %s", sheet_id)
 
         header, rows = self._sheet_values_to_header_and_rows(
             sheet_values=sheet_values,
@@ -502,7 +498,7 @@ class GoogleSheetsGateway(GoogleSheetMapper):
         batch_body = {
             "requests": [req for req in requests]
         }
-        main_logger.info("Prepared batch body: %s", batch_body)
+        main_logger.info("Prepared batchUpdate body")
         req = self.sheet_service.batchUpdate(
             spreadsheetId=sheet_id,
             body=batch_body
@@ -510,7 +506,8 @@ class GoogleSheetsGateway(GoogleSheetMapper):
         resp, e = self._make_request(sheet_id=sheet_id,
                                      req=req, req_type=W_REQUEST)
         if e is not None:
-            main_logger.error("err for sheet %s: %s", sheet_id, e)
+            main_logger.error("err for sheet %s: %s",
+                              sheet_id, e, exc_info=True)
             return None, e
         return resp, None
 
