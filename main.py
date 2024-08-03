@@ -27,9 +27,6 @@ if not DEBUG:
     main_logger.setLevel(logging.INFO)
 
 PROXIES = sys.argv[3]
-MODE = "rent"
-if len(sys.argv) > 4:
-    MODE = sys.argv[4]
 
 
 main_logger.debug("Read all the constants")
@@ -98,11 +95,7 @@ def main():
             continue
         
         try:
-            parser.perform_search(
-                search_url=search,
-                debug_mode=DEBUG,
-                mode=amst_re.PARSING_MODES[MODE]
-            )
+            parser.perform_search(search_url=search, debug_mode=DEBUG)
         except amst_re.ZeroListingsFoundException as e:
             main_logger.warning("no listings found for %s after retries", search)
             continue
@@ -120,7 +113,7 @@ def main():
                     "Sending an alert on %s, search class in %s",
                     listing, parser
                 )
-                r = TG_GW.send_message(f"New listing ({MODE}): \n{listing}")
+                r = TG_GW.send_message(f"New listing: \n{listing}")
                 if r.status_code != 200:
                     main_logger.warning("Message failed for %s", listing)
 

@@ -188,6 +188,13 @@ class ParariusGateway(BaseGateway):
         self.sesh.cookies = r.cookies
         main_logger.debug("cookie set to %s", self.sesh.cookies)
 
+    def _search_url_to_mode(self, search_url: str):
+        if self.buy_listing_pattern in search_url:
+            return PARSING_MODE_BUY
+        elif self.rental_listing_pattern in search_url:
+            return PARSING_MODE_RENT
+        else:
+            raise NotImplementedError(f"Failed to derive mode from {search_url} url")  # noqa: E501
     
     def get_all_listings(self, page_soup: bs4.BeautifulSoup,
                          mode: int, base_url: str):
@@ -231,9 +238,9 @@ class ParariusGateway(BaseGateway):
         """
         Performs a search on one search url
         """
-        if mode not in {PARSING_MODE_BUY, PARSING_MODE_RENT}:
-            raise NotImplementedError("Unexpcted search mode")
+        mode = self._search_url_to_mode(search_url=search_url)
         main_logger.info("Attempting a search with mode %s", mode)
+        
         if debug_mode is None:
             debug_mode = True
         main_logger.info("Searching for %s with debug mode %s",
@@ -362,11 +369,10 @@ class FundaGateway(BaseGateway):
         
         self._perform_search(search_url=next_url, debug_mode=debug_mode)
 
-    def perform_search(self, search_url: str, mode: int,
+    def perform_search(self, search_url: str,
                        debug_mode: Optional[bool] = None):
         """
         Performs a search on one search url (recursively reads different result pages)
         """
-        main_logger.debug("Search with %s mode", mode)
         self._perform_search(search_url=search_url, debug_mode=debug_mode)
        
