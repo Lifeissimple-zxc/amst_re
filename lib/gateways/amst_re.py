@@ -189,9 +189,11 @@ class ParariusGateway(BaseGateway):
         main_logger.debug("cookie set to %s", self.sesh.cookies)
 
     def _search_url_to_mode(self, search_url: str):
-        if self.buy_listing_pattern in search_url:
+        main_logger.debug("deriving mode from url %s using base urls %s",
+                          search_url, self.base_urls)
+        if self.base_urls["buy"] in search_url:
             return PARSING_MODE_BUY
-        elif self.rental_listing_pattern in search_url:
+        elif self.base_urls["rent"] in search_url:
             return PARSING_MODE_RENT
         else:
             raise NotImplementedError(f"Failed to derive mode from {search_url} url")  # noqa: E501
@@ -233,14 +235,14 @@ class ParariusGateway(BaseGateway):
         return next_page_el.find("a").get("href")
 
     @retry.retry(exceptions=ZeroListingsFoundException, tries=3, delay=2, backoff=2)  # noqa: E501
-    def perform_search(self, search_url: str, mode: int,
+    def perform_search(self, search_url: str,
                        debug_mode: Optional[bool] = None):
         """
         Performs a search on one search url
         """
         mode = self._search_url_to_mode(search_url=search_url)
         main_logger.info("Attempting a search with mode %s", mode)
-        
+
         if debug_mode is None:
             debug_mode = True
         main_logger.info("Searching for %s with debug mode %s",
@@ -278,7 +280,7 @@ class ParariusGateway(BaseGateway):
             return
         # recursive call, we don't get here if the page was last
         self.perform_search(search_url=f"{base_url}{next_p}",
-                            mode=mode, debug_mode=debug_mode)
+                            debug_mode=debug_mode)
 
 
 class FundaGateway(BaseGateway):

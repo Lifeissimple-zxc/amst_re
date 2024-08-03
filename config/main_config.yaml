@@ -14,8 +14,8 @@ pararius:
   rental_listing_pattern: "for-rent"
   buy_listing_pattern: "-te-koop"
   base_urls:
-    rent: "https://pararius.com"
-    buy: "https://pararius.nl"
+    rent: "https://www.pararius.com"
+    buy: "https://www.pararius.nl"
   auth_url: "https://www.pararius.nl/cgi-bin/fl/js/verify"
   rps: 0.5
 
