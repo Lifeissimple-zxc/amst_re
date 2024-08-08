@@ -30,3 +30,7 @@ logs/
 # Ignoring contents of cache & storage
 cache/**
 storage/
+
+# executables
+*.exe
+logcleaner
