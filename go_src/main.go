@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	logRetentionDays = 2
-	parentsUp        = 1
-	logsDir          = "logs"
-	logPattern       = ".log"
+	logRetentionHours = 96
+	parentsUp         = 1
+	logsDir           = "logs"
+	logPattern        = ".log"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 		if err != nil {
 			log.Printf("Error fetching file info: %v\n", err)
 		}
-		if int(currTime.Sub(info.ModTime()).Hours()/24) > logRetentionDays {
+		if int(currTime.Sub(info.ModTime()).Hours()) > logRetentionHours {
 			logFilesToDelete = append(logFilesToDelete, f)
 		}
 	}
