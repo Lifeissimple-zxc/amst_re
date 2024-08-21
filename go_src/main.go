@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	logRetentionDays = 4
+	logRetentionDays = 2
 	parentsUp        = 1
 	logsDir          = "logs"
 	logPattern       = ".log"
