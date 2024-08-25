@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cd /home/mararkarp/projects/amst_re/go_src
+cd /home/mararpi5/Documents/prog/amst_re/go_src
 ./logcleaner
