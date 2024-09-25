@@ -2,7 +2,7 @@
 
 *Amst RE* (Amsterdam Real Estate) is a framework that automates house hunting in the Netherlands. It does so by fetching data from [Funda](https://www.funda.nl/) and [Pararius](https://www.pararius.com). It enables to react to new listings faster thus increasing one's chances for a successful bid.
 
-It has Amst because it was initially developed it for Amstedam specifically, but it can monitor any city as of today.
+It has Amst in its name because it was initially developed it for Amstedam. Today it can cover any city in the Netherlands.
 
 The process is simple and consists of the following steps:
 
